@@ -1,0 +1,74 @@
+# Install required libraries if not already installed
+# !pip install dash plotly pandas
+
+import dash
+from dash import dcc, html
+from dash.dependencies import Input, Output
+import plotly.graph_objs as go
+import pandas as pd
+
+# Load data (replace with actual data source or API calls)
+# Example CSV files should have columns like 'Year', 'Country', 'GDP', 'Inflation', 'Unemployment', 'Interest Rate'
+data = pd.read_csv('economy_data.csv')
+
+# List of countries and indicators for dropdown options
+countries = data['Country'].unique()
+indicators = ['GDP', 'Inflation', 'Unemployment', 'Interest Rate']
+
+# Initialize the Dash app
+app = dash.Dash(__name__)
+app.title = "World Economy Tracker"
+
+# App layout
+app.layout = html.Div([
+    html.H1("World Economy Tracker"),
+    html.Label("Select Country:"),
+    dcc.Dropdown(
+        id='country-selector',
+        options=[{'label': country, 'value': country} for country in countries],
+        value=[countries[0]],
+        multi=True
+    ),
+    html.Label("Select Indicator:"),
+    dcc.Dropdown(
+        id='indicator-selector',
+        options=[{'label': indicator, 'value': indicator} for indicator in indicators],
+        value=indicators,
+        multi=True
+    ),
+    dcc.Graph(id='line-chart')
+])
+
+# Callback to update the line chart based on selected countries and indicators
+@app.callback(
+    Output('line-chart', 'figure'),
+    [Input('country-selector', 'value'),
+     Input('indicator-selector', 'value')]
+)
+def update_chart(selected_countries, selected_indicators):
+    fig = go.Figure()
+
+    for country in selected_countries:
+        country_data = data[data['Country'] == country]
+        for indicator in selected_indicators:
+            fig.add_trace(
+                go.Scatter(
+                    x=country_data['Year'],
+                    y=country_data[indicator],
+                    mode='lines+markers',
+                    name=f"{country} - {indicator}"
+                )
+            )
+
+    fig.update_layout(
+        title="Economic Indicators Comparison",
+        xaxis_title="Year",
+        yaxis_title="Value",
+        legend_title="Country - Indicator"
+    )
+
+    return fig
+
+# Run the app
+if __name__ == '__main__':
+    app.run_server(debug=True)
